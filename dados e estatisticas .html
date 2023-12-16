@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <title>Tabela com Dados do XML Externo</title>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+        }
+
+        table {
+            border: 1px solid #ddd;
+            border-collapse: collapse;
+            width: 100%;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 15px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        canvas {
+            display: block;
+            margin: 20px auto;
+            max-width: 400px;
+            max-height: 400px; /* Adicionado para limitar a altura */
+        }
+
+        .progress-bar-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress {
+            width: 0;
+            height: 30px;
+            background-color: #4CAF50;
+            transition: width 1s ease-in-out;
+            position: relative;
+        }
+
+        #pieChartContainer {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <div id="divBotaoImagem">
+            <a id="botaoImagem" href="app.html">
+                <img src="X.png" alt="Imagem do Botão" style="width: 15px; height: 15px;">
+            </a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Tabela de Dados do Lote -->
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2"><h3>Dados do Lote</h3></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr></tr>
+                <tr><td id="ultimaReposicao"></td></tr>
+                <tr><td>Peso Reposto</td><td id="pesoReposto"></td></tr>
+                <tr><td>Ração Restante</td><td id="racaoRestante"></td></tr>
+            </tbody>
+        </table>
+
+        <!-- Tabela de Estatísticas -->
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2"><h3>Estatísticas</h3></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Numero de disperçoes</td><td id="numeroDeDispersoes"></td></tr>
+                <tr><td>Total de raçao restante</td><td id="totalRacaoRestante"></td></tr>
+                <tr><td>Total de Quantidade de Ração</td><td id="totalQuantidadeRacao"></td></tr>
+            </tbody>
+        </table>
+
+        <!-- Gráfico de Rosca (Doughnut Chart) -->
+        <div id="pieChartContainer">
+            <h3>Porcentagem de Ração Utilizada e Ração Restante</h3>
+            <canvas id="pieChart" width="400" height="400"></canvas>
+        </div>
+
+        <!-- Script JavaScript -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                carregarDadosCSV();
+            });
+
+            function carregarDadosCSV() {
+                const url = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1jIptXcujgypxE7qyGawUDc-AZj7P1upIdvMwenuZY8FBgDhkm73UNiiKh8Kpn_UFmRcr-hVHFrcN/pub?output=csv') + '&_=' + Date.now();
+
+                fetch(url)
+                    .then(response => response.text())
+                    .then(csvData => {
+                        console.log('Dados CSV:', csvData);
+
+                        // Processar os dados do CSV conforme necessário
+                        const linhas = csvData.split('\n');
+
+                        // Supondo que a primeira linha contenha os cabeçalhos
+                        const cabecalhos = linhas[0].split(',');
+
+                        // Encontrar os índices das colunas necessárias
+                        const indiceQuantidadeRacao = cabecalhos.indexOf('QUANTIDADE_DE_RACAO');
+                        const indicePesoReposto = cabecalhos.indexOf('TOTAL_REPOSTO');
+                        const indiceDataReposicao = cabecalhos.indexOf('DATA_REPOSICAO');
+
+                        // Inicializar variáveis para armazenar os totais da soma
+                        let totalSomaQuantidadeRacao = 0;
+                        let totalSomaPesoReposto = 0;
+                        let ultimaReposicao = null;
+
+                        // Iterar sobre as linhas de dados (começando da segunda linha)
+                        for (let i = 1; i < linhas.length; i++) {
+                            const dados = linhas[i].split(',');
+
+                            // Atribuir o valor da coluna "QUANTIDADE_DE_RACAO" ao campo com ID "totalQuantidadeRacao"
+                            const quantidadeRacao = parseFloat(dados[indiceQuantidadeRacao]);
+                            totalSomaQuantidadeRacao += isNaN(quantidadeRacao) ? 0 : quantidadeRacao;
+
+                            // Atribuir o valor da coluna "TOTAL_REPOSTO" ao campo com ID "pesoReposto"
+                            const pesoReposto = parseFloat(dados[indicePesoReposto]);
+                            totalSomaPesoReposto += isNaN(pesoReposto) ? 0 : pesoReposto;
+
+                            // Atribuir o valor da coluna "DATA_REPOSICAO" ao campo com ID "ultimaReposicao"
+                            ultimaReposicao = dados[indiceDataReposicao];
+                        }
+
+                        // Atribuir a última reposição ao campo com ID "ultimaReposicao"
+                        document.getElementById('ultimaReposicao').textContent = ultimaReposicao;
+
+                        // Atribuir o total da soma ao campo com ID "totalQuantidadeRacao"
+                        document.getElementById('totalQuantidadeRacao').textContent = totalSomaQuantidadeRacao.toFixed(2);
+
+                        // Atribuir o número de dispersões ao campo com ID "numeroDeDispersoes"
+                        document.getElementById('numeroDeDispersoes').textContent = linhas.length - 1;
+
+                        // Atribuir o total da soma ao campo com ID "pesoReposto"
+                        document.getElementById('pesoReposto').textContent = totalSomaPesoReposto.toFixed(2);
+
+                        // Calcular e atribuir o total de ração restante ao campo com ID "totalRacaoRestante"
+                        const totalRacaoRestante = totalSomaPesoReposto - totalSomaQuantidadeRacao;
+                        document.getElementById('totalRacaoRestante').textContent = totalRacaoRestante.toFixed(2);
+
+                        // Atribuir a porcentagem de ração restante ao campo com ID "racaoRestante"
+                        document.getElementById('racaoRestante').textContent = (totalRacaoRestante / totalSomaPesoReposto * 100).toFixed(2) + "%";
+
+                        // Chamar função para desenhar o gráfico de rosca
+                        desenharGraficoRosca(totalRacaoRestante, totalSomaPesoReposto);
+                    });
+            }
+
+            function desenharGraficoRosca(racaoRestante, pesoReposto) {
+                const canvas = document.getElementById('pieChart');
+                const context = canvas.getContext('2d');
+
+                // Destruir o gráfico existente para evitar crescimento infinito
+                Chart.getChart(canvas)?.destroy();
+
+                const percentRacaoRestante = (racaoRestante / pesoReposto) * 100;
+                const percentRacaoUtilizada = 100 - percentRacaoRestante;
+
+                const data = {
+                    labels: ['Ração Utilizada', 'Ração Restante'],
+                    datasets: [{
+                        data: [percentRacaoUtilizada, percentRacaoRestante],
+                        backgroundColor: ['#FF6384', '#36A2EB'],
+                        hoverBackgroundColor: ['#FF6384', '#36A2EB']
+                    }]
+                };
+
+                const options = {
+                    responsive: true,
+                    maintainAspectRatio: false
+                };
+
+                const pieChart = new Chart(context, {
+                    type: 'doughnut',
+                    data: data,
+                    options: options
+                });
+            }
+        </script>
+    </div>
+</body>
+</html>
